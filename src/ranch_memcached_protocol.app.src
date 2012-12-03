@@ -1,0 +1,16 @@
+{application, ranch_memcached_protocol,
+ [
+  {description, "Memcached protocol for Ranch"},
+  {vsn, "0.1"},
+  {modules, [
+    ranch_memcached_protocol
+  ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { ranch_memcached_protocol_app, []}},
+  {env, []}
+ ]}.
+
