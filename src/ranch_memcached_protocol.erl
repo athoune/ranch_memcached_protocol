@@ -3,11 +3,14 @@
 
 -include("rmp_constants.hrl").
 
--record(lengths, {
+-record(header, {
     extra,
     key,
     body,
-    total
+    total,
+    opcode,
+    opaque,
+    cas
     }).
 
 -record(message, {
@@ -58,13 +61,12 @@ read(Length, Socket, Transport, Remains) ->
 loop(header, Socket, Transport, Opts) ->
     case read(24, Socket, Transport) of
         {ok, Data} ->
-            {ok, Sizes} = handle_header(Data),
-            io:format("Sizes: ~p~n", [Sizes]),
-            loop(Sizes, Socket, Transport, Opts);
+            {ok, Header} = handle_header(Data),
+            loop(Header, Socket, Transport, Opts);
         {error, Error} ->
             io:format("Socket error : ~p~n", [Error])
     end;
-loop(#lengths{total=Len}=Sizes, Socket, Transport, Opts) ->
+loop(#header{total=Len}=Sizes, Socket, Transport, Opts) ->
     {ok, Data} = read(Len, Socket, Transport),
     handle_body(Data, Sizes),
     loop(header, Socket, Transport, Opts).
@@ -74,9 +76,10 @@ handle_header(<<?REQ_MAGIC:8, Opcode:8, KeyLen:16,
     BodyLen:32,
     Opaque:32,
     CAS:64>>) ->
-    {ok, #lengths{extra=ExtraLen, key=KeyLen, body=BodyLen - (KeyLen + ExtraLen), total=BodyLen}}.
+    {ok, #header{extra=ExtraLen, key=KeyLen, body=BodyLen - (KeyLen + ExtraLen),
+            total=BodyLen, opcode=Opcode, opaque=Opaque, cas=CAS}}.
 
-handle_body(Data, #lengths{extra=ExtraLen, key=KeyLen, body=BodyLen}=Sizes) ->
+handle_body(Data, #header{extra=ExtraLen, key=KeyLen, body=BodyLen}=Sizes) ->
     io:format("Body, ~p ~p ~p ~p ~n", [size(Data), Sizes, Data, {ExtraLen, KeyLen, BodyLen} ]),
     EL = ExtraLen * 8,
     KL = KeyLen * 8,
@@ -86,6 +89,8 @@ handle_body(Data, #lengths{extra=ExtraLen, key=KeyLen, body=BodyLen}=Sizes) ->
     io:format("Message ~p~n", [Message]),
     ok.
 
+%dummy(Conn, #message{}=Message) ->
+    %respond
 bin_size(undefined) -> 0;
 bin_size(List) when is_list(List) -> bin_size(list_to_binary(List));
 bin_size(Binary) -> size(Binary).
