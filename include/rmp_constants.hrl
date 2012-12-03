@@ -55,6 +55,14 @@
 -define(UNKNOWN_COMMAND, 16#81).
 -define(ENOMEM, 16#82).
 
+-record(rmp_message, {
+    extra,
+    key,
+    body,
+    cas,
+    opaque
+    }).
+
 -record(rmp_response, {
           status=0,
           extra,

@@ -1,5 +1,5 @@
 -module(ranch_memcached_protocol).
--export([start_link/4, init/4, respond/4, handle/3]).
+-export([start_link/4, init/4, respond/4]).
 
 -include("rmp_constants.hrl").
 
@@ -13,13 +13,6 @@
     cas
     }).
 
--record(message, {
-    extra,
-    key,
-    body,
-    cas,
-    opaque
-    }).
 
 -record(opts, {
     handler=dummy
@@ -85,17 +78,12 @@ handle_body(Conn, Data, #header{extra=ExtraLen, key=KeyLen, body=BodyLen,
     KL = KeyLen * 8,
     BL = BodyLen * 8,
     <<Extra:EL/bitstring, Key:KL/bitstring, Body:BL/bitstring>> = Data,
-    Message = #message{extra=Extra, key=Key, body=Body, opaque=Opaque, cas=CAS},
+    Message = #rmp_message{extra=Extra, key=Key, body=Body, opaque=Opaque, cas=CAS},
     io:format("Message ~p~n", [Message]),
     io:format("Handler ~p~n", [Handler]),
     Handler:handle(Conn, Opcode, Message),
     ok.
 
-handle(Conn, ?SET, #message{}=Message) ->
-    io:format("Handle ~p~n", [Message]),
-    respond(Conn, ?SUCCESS, 0, #rmp_response{});
-handle(_Conn, Opcode, Message) ->
-    io:format("Oups handle: ~p ~p ~n", [Opcode, Message]).
 
 bin_size(undefined) -> 0;
 bin_size(List) when is_list(List) -> bin_size(list_to_binary(List));
