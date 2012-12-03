@@ -18,8 +18,12 @@
     opaque
     }).
 
-start_link(ListenerPid, Socket, Transport, Opts) ->
-    Pid = spawn_link(?MODULE, init, [ListenerPid, Socket, Transport, Opts]),
+-record(opts, {
+    handler=dummy
+    }).
+
+start_link(ListenerPid, Socket, Transport, Handler) ->
+    Pid = spawn_link(?MODULE, init, [ListenerPid, Socket, Transport, #opts{handler=Handler}]),
     {ok, Pid}.
 
 init(ListenerPid, Socket, Transport, Opts) ->
