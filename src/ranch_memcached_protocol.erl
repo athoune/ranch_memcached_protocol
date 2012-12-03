@@ -1,5 +1,5 @@
 -module(ranch_memcached_protocol).
--export([start_link/4, init/4]).
+-export([start_link/4, init/4, respond/4]).
 
 -include("rmp_constants.hrl").
 
@@ -81,6 +81,27 @@ handle_body(Data, #lengths{extra=ExtraLen, key=KeyLen, body=BodyLen}=Sizes) ->
     Message = #message{extra=Extra, key=Key, body=Body},
     io:format("Message ~p~n", [Message]),
     ok.
+
+bin_size(undefined) -> 0;
+bin_size(List) when is_list(List) -> bin_size(list_to_binary(List));
+bin_size(Binary) -> size(Binary).
+
+xmit(_Socket, _Transport, undefined) -> ok;
+xmit(Socket, Transport, List) when is_list(List) -> xmit(Socket, Transport, list_to_binary(List));
+xmit(Socket, Transport, Data) -> Transport:send(Socket, Data).
+
+respond({Socket, Transport}, OpCode, Opaque, Res) ->
+    KeyLen = bin_size(Res#rmp_response.key),
+    ExtraLen = bin_size(Res#rmp_response.extra),
+    BodyLen = bin_size(Res#rmp_response.body) + (KeyLen + ExtraLen),
+    Status = Res#rmp_response.status,
+    CAS = Res#rmp_response.cas,
+    ok = Transport:send(Socket, <<?RES_MAGIC, OpCode:8, KeyLen:16,
+                               ExtraLen:8, 0:8, Status:16,
+                               BodyLen:32, Opaque:32, CAS:64>>),
+    ok = xmit(Socket, Transport, Res#rmp_response.extra),
+    ok = xmit(Socket, Transport, Res#rmp_response.key),
+    ok = xmit(Socket, Transport, Res#rmp_response.body).
 
 %process_message(Socket, StorageServer, {ok, <<?REQ_MAGIC:8, ?STAT:8, KeyLen:16,
                                             %ExtraLen:8, 0:8, 0:16,
