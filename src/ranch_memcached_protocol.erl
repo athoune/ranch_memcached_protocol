@@ -29,7 +29,7 @@ init(ListenerPid, Socket, Transport, Opts) ->
     ok.
 
 read(Length, Socket, Transport) ->
-    case Transport:recv(Socket, Length, 100) of
+    case Transport:recv(Socket, Length, 30000) of
         {ok, Data} ->
             L = size(Data),
             case L of
@@ -40,7 +40,7 @@ read(Length, Socket, Transport) ->
     end.
 
 read(Length, Socket, Transport, Remains) ->
-    case Transport:recv(Socket, Length, 100) of
+    case Transport:recv(Socket, Length, 30000) of
         {ok, Data} ->
             L = size(Data),
             case L of
