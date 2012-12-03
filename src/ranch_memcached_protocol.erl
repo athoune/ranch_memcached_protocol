@@ -1,5 +1,5 @@
 -module(ranch_memcached_protocol).
--export([start_link/4, init/3]).
+-export([start_link/4, init/4]).
 
 -include("rmp_constants.hrl").
 
@@ -19,13 +19,13 @@
     }).
 
 start_link(ListenerPid, Socket, Transport, Opts) ->
-    Pid = spawn_link(?MODULE, init, [ListenerPid, Socket, Transport]),
+    Pid = spawn_link(?MODULE, init, [ListenerPid, Socket, Transport, Opts]),
     {ok, Pid}.
 
-init(ListenerPid, Socket, Transport) ->
+init(ListenerPid, Socket, Transport, Opts) ->
     ok = ranch:accept_ack(ListenerPid),
     io:format("Got a connection!~n"),
-    loop(header, Socket, Transport),
+    loop(header, Socket, Transport, Opts),
     ok.
 
 read(Length, Socket, Transport) ->
@@ -51,19 +51,19 @@ read(Length, Socket, Transport, Remains) ->
     end.
 
 
-loop(header, Socket, Transport) ->
+loop(header, Socket, Transport, Opts) ->
     case read(24, Socket, Transport) of
         {ok, Data} ->
             {ok, Sizes} = handle_header(Data),
             io:format("Sizes: ~p~n", [Sizes]),
-            loop(Sizes, Socket, Transport);
+            loop(Sizes, Socket, Transport, Opts);
         {error, Error} ->
             io:format("Socket error : ~p~n", [Error])
     end;
-loop(#lengths{total=Len}=Sizes, Socket, Transport) ->
+loop(#lengths{total=Len}=Sizes, Socket, Transport, Opts) ->
     {ok, Data} = read(Len, Socket, Transport),
     handle_body(Data, Sizes),
-    loop(header, Socket, Transport).
+    loop(header, Socket, Transport, Opts).
 
 handle_header(<<?REQ_MAGIC:8, Opcode:8, KeyLen:16,
     ExtraLen:8, 0:8, 0:16,
