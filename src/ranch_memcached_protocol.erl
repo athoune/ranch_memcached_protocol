@@ -1,5 +1,5 @@
 -module(ranch_memcached_protocol).
--export([start_link/4, init/4, respond/4]).
+-export([start_link/4, init/4, respond/4, handle/3]).
 
 -include("rmp_constants.hrl").
 
@@ -25,7 +25,7 @@
     handler=dummy
     }).
 
-start_link(ListenerPid, Socket, Transport, Handler) ->
+start_link(ListenerPid, Socket, Transport, [Handler]) ->
     Pid = spawn_link(?MODULE, init, [ListenerPid, Socket, Transport, #opts{handler=Handler}]),
     {ok, Pid}.
 
@@ -68,7 +68,7 @@ loop(header, Socket, Transport, Opts) ->
     end;
 loop(#header{total=Len}=Sizes, Socket, Transport, Opts) ->
     {ok, Data} = read(Len, Socket, Transport),
-    handle_body(Data, Sizes),
+    handle_body({Socket, Transport}, Data, Sizes, Opts),
     loop(header, Socket, Transport, Opts).
 
 handle_header(<<?REQ_MAGIC:8, Opcode:8, KeyLen:16,
@@ -79,38 +79,45 @@ handle_header(<<?REQ_MAGIC:8, Opcode:8, KeyLen:16,
     {ok, #header{extra=ExtraLen, key=KeyLen, body=BodyLen - (KeyLen + ExtraLen),
             total=BodyLen, opcode=Opcode, opaque=Opaque, cas=CAS}}.
 
-handle_body(Data, #header{extra=ExtraLen, key=KeyLen, body=BodyLen}=Sizes) ->
-    io:format("Body, ~p ~p ~p ~p ~n", [size(Data), Sizes, Data, {ExtraLen, KeyLen, BodyLen} ]),
+handle_body(Conn, Data, #header{extra=ExtraLen, key=KeyLen, body=BodyLen,
+        opcode=Opcode, opaque=Opaque, cas=CAS}, #opts{handler=Handler}) ->
     EL = ExtraLen * 8,
     KL = KeyLen * 8,
     BL = BodyLen * 8,
     <<Extra:EL/bitstring, Key:KL/bitstring, Body:BL/bitstring>> = Data,
-    Message = #message{extra=Extra, key=Key, body=Body},
+    Message = #message{extra=Extra, key=Key, body=Body, opaque=Opaque, cas=CAS},
     io:format("Message ~p~n", [Message]),
+    io:format("Handler ~p~n", [Handler]),
+    Handler:handle(Conn, Opcode, Message),
     ok.
 
-%dummy(Conn, #message{}=Message) ->
-    %respond
+handle(Conn, ?SET, #message{}=Message) ->
+    io:format("Handle ~p~n", [Message]),
+    respond(Conn, ?SUCCESS, 0, #rmp_response{});
+handle(_Conn, Opcode, Message) ->
+    io:format("Oups handle: ~p ~p ~n", [Opcode, Message]).
+
 bin_size(undefined) -> 0;
 bin_size(List) when is_list(List) -> bin_size(list_to_binary(List));
 bin_size(Binary) -> size(Binary).
 
-xmit(_Socket, _Transport, undefined) -> ok;
-xmit(Socket, Transport, List) when is_list(List) -> xmit(Socket, Transport, list_to_binary(List));
-xmit(Socket, Transport, Data) -> Transport:send(Socket, Data).
+xmit(_, undefined) -> ok;
+xmit(Conn, List) when is_list(List) -> xmit(Conn, list_to_binary(List));
+xmit({Socket, Transport}, Data) -> Transport:send(Socket, Data).
 
-respond({Socket, Transport}, OpCode, Opaque, Res) ->
-    KeyLen = bin_size(Res#rmp_response.key),
-    ExtraLen = bin_size(Res#rmp_response.extra),
-    BodyLen = bin_size(Res#rmp_response.body) + (KeyLen + ExtraLen),
-    Status = Res#rmp_response.status,
-    CAS = Res#rmp_response.cas,
-    ok = Transport:send(Socket, <<?RES_MAGIC, OpCode:8, KeyLen:16,
+respond({Socket, Transport}=Conn, OpCode, Opaque,
+        #rmp_response{extra=Extra, key=Key, body=Body, status=Status, cas=CAS}) ->
+    KeyLen = bin_size(Key),
+    ExtraLen = bin_size(Extra),
+    BodyLen = bin_size(Body) + (KeyLen + ExtraLen),
+    %io:format("Respond ~p ~n", [[OpCode, KeyLen, ExtraLen, Status, BodyLen, Opaque, CAS]]),
+    Blob = <<?RES_MAGIC, OpCode:8, KeyLen:16,
                                ExtraLen:8, 0:8, Status:16,
-                               BodyLen:32, Opaque:32, CAS:64>>),
-    ok = xmit(Socket, Transport, Res#rmp_response.extra),
-    ok = xmit(Socket, Transport, Res#rmp_response.key),
-    ok = xmit(Socket, Transport, Res#rmp_response.body).
+                               BodyLen:32, Opaque:32, CAS:64>>,
+    ok = Transport:send(Socket, Blob),
+    ok = xmit(Conn, Extra),
+    ok = xmit(Conn, Key),
+    ok = xmit(Conn, Body).
 
 %process_message(Socket, StorageServer, {ok, <<?REQ_MAGIC:8, ?STAT:8, KeyLen:16,
                                             %ExtraLen:8, 0:8, 0:16,
