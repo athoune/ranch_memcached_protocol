@@ -79,7 +79,7 @@ handle_body(Conn, Data, #header{extra=ExtraLen, key=KeyLen, body=BodyLen,
     BL = BodyLen * 8,
     <<Extra:EL/bitstring, Key:KL/bitstring, Body:BL/bitstring>> = Data,
     Message = #rmp_message{extra=Extra, key=Key, body=Body, opaque=Opaque, cas=CAS},
-    io:format("Message ~p~n", [Message]),
+    io:format("Message ~p ~p~n", [Opcode, Message]),
     io:format("Handler ~p~n", [Handler]),
     Handler:handle(Conn, Opcode, Message),
     ok.
@@ -91,17 +91,18 @@ bin_size(Binary) -> size(Binary).
 
 xmit(_, undefined) -> ok;
 xmit(Conn, List) when is_list(List) -> xmit(Conn, list_to_binary(List));
-xmit({Socket, Transport}, Data) -> Transport:send(Socket, Data).
+xmit({Socket, Transport}, Data) -> io:format("xmit ~p~n", [Data]), Transport:send(Socket, Data).
 
 respond({Socket, Transport}=Conn, OpCode,
         #rmp_response{extra=Extra, key=Key, body=Body, status=Status, cas=CAS, opaque=Opaque}) ->
     KeyLen = bin_size(Key),
     ExtraLen = bin_size(Extra),
     BodyLen = bin_size(Body) + (KeyLen + ExtraLen),
-    %io:format("Respond ~p ~n", [[OpCode, KeyLen, ExtraLen, Status, BodyLen, Opaque, CAS]]),
+    io:format("Respond ~p ~n", [[OpCode, KeyLen, ExtraLen, Status, BodyLen, Opaque, CAS]]),
     Blob = <<?RES_MAGIC, OpCode:8, KeyLen:16,
                                ExtraLen:8, 0:8, Status:16,
                                BodyLen:32, Opaque:32, CAS:64>>,
+    io:format("Blob ~p~n", [Blob]),
     ok = Transport:send(Socket, Blob),
     ok = xmit(Conn, Extra),
     ok = xmit(Conn, Key),
