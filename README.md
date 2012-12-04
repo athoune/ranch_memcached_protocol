@@ -8,7 +8,7 @@ http://cloud.github.com/downloads/memcached/memcached/protocol-binary.txt
 Test it
 -------
 
-    erl -pa deps/*/ebin -pa ebin -boot startt_sasl -eval "application:start(ranch)."
+    erl -pa deps/*/ebin -pa ebin -boot start_sasl -eval "application:start(ranch)."
 
     ranch:start_listener(memcached, 10, ranch_tcp, [{port, 11211}], ranch_memcached_protocol, [rmp_dummy]).
 
