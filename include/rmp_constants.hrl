@@ -68,5 +68,6 @@
           extra,
           key,
           body,
+          opaque=0,
           cas=0
          }).

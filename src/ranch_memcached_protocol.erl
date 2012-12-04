@@ -1,5 +1,5 @@
 -module(ranch_memcached_protocol).
--export([start_link/4, init/4, respond/4]).
+-export([start_link/4, init/4, respond/3]).
 
 -include("rmp_constants.hrl").
 
@@ -93,8 +93,8 @@ xmit(_, undefined) -> ok;
 xmit(Conn, List) when is_list(List) -> xmit(Conn, list_to_binary(List));
 xmit({Socket, Transport}, Data) -> Transport:send(Socket, Data).
 
-respond({Socket, Transport}=Conn, OpCode, Opaque,
-        #rmp_response{extra=Extra, key=Key, body=Body, status=Status, cas=CAS}) ->
+respond({Socket, Transport}=Conn, OpCode,
+        #rmp_response{extra=Extra, key=Key, body=Body, status=Status, cas=CAS, opaque=Opaque}) ->
     KeyLen = bin_size(Key),
     ExtraLen = bin_size(Extra),
     BodyLen = bin_size(Body) + (KeyLen + ExtraLen),
