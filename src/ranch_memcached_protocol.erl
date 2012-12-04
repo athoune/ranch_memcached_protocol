@@ -106,33 +106,3 @@ respond({Socket, Transport}=Conn, OpCode, Opaque,
     ok = xmit(Conn, Extra),
     ok = xmit(Conn, Key),
     ok = xmit(Conn, Body).
-
-%process_message(Socket, StorageServer, {ok, <<?REQ_MAGIC:8, ?STAT:8, KeyLen:16,
-                                            %ExtraLen:8, 0:8, 0:16,
-                                            %BodyLen:32,
-                                            %Opaque:32,
-                                            %CAS:64>>}) ->
-    %error_logger:info_msg("Got a stat request for ~p.~n", [StorageServer]),
-
-    %Extra = read_data(Socket, ExtraLen, extra),
-    %Key = read_data(Socket, KeyLen, key),
-    %Body = read_data(Socket, BodyLen - (KeyLen + ExtraLen), body),
-
-    %% Hand the request off to the server.
-    %gen_server:cast(StorageServer, {?STAT, Extra, Key, Body, CAS, Socket, Opaque});
-%process_message(Socket, StorageServer, {ok, <<?REQ_MAGIC:8, OpCode:8, KeyLen:16,
-                                            %ExtraLen:8, 0:8, 0:16,
-                                            %BodyLen:32,
-                                            %Opaque:32,
-                                            %CAS:64>>}) ->
-    %error_logger:info_msg("Got message of type ~p to give to ~p.~n",
-                          %[OpCode, StorageServer]),
-
-    %Extra = read_data(Socket, ExtraLen, extra),
-    %Key = read_data(Socket, KeyLen, key),
-    %Body = read_data(Socket, BodyLen - (KeyLen + ExtraLen), body),
-
-    %% Hand the request off to the server.
-    %Res = gen_server:call(StorageServer, {OpCode, Extra, Key, Body, CAS}),
-
-    %respond(Socket, OpCode, Opaque, Res).
