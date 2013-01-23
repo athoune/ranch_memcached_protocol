@@ -60,9 +60,13 @@ loop(header, Socket, Transport, Opts) ->
             io:format("Socket error : ~p~n", [Error])
     end;
 loop(#header{total=Len}=Sizes, Socket, Transport, Opts) ->
-    {ok, Data} = read(Len, Socket, Transport),
-    handle_body({Socket, Transport}, Data, Sizes, Opts),
-    loop(header, Socket, Transport, Opts).
+    case read(Len, Socket, Transport) of
+        {ok, Data} ->
+            handle_body({Socket, Transport}, Data, Sizes, Opts),
+            loop(header, Socket, Transport, Opts);
+        {error, Error} ->
+            io:format("Socket error : ~p~n", [Error])
+    end.
 
 handle_header(<<?REQ_MAGIC:8, Opcode:8, KeyLen:16,
     ExtraLen:8, 0:8, 0:16,
@@ -107,3 +111,5 @@ respond({Socket, Transport}=Conn, OpCode,
     ok = xmit(Conn, Extra),
     ok = xmit(Conn, Key),
     ok = xmit(Conn, Body).
+
+%[TODO] error
