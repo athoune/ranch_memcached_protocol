@@ -56,7 +56,7 @@
 -define(ENOMEM, 16#82).
 
 -record(rmp_message, {
-    extra,
+    extra = <<0:32>>,
     key,
     body,
     cas,
@@ -65,7 +65,7 @@
 
 -record(rmp_response, {
           status=0,
-          extra,
+          extra = <<0:32>>,
           key,
           body,
           opaque=0,
