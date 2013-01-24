@@ -59,13 +59,18 @@ loop(header, Socket, Transport, Opts) ->
         {error, Error} ->
             io:format("Socket error : ~p~n", [Error])
     end;
-loop(#header{total=Len}=Sizes, Socket, Transport, Opts) ->
-    case read(Len, Socket, Transport) of
-        {ok, Data} ->
-            handle_body({Socket, Transport}, Data, Sizes, Opts),
-            loop(header, Socket, Transport, Opts);
-        {error, Error} ->
-            io:format("Socket error : ~p~n", [Error])
+loop(#header{total=Len, opcode=Opcode}=Sizes, Socket, Transport, #opts{handler=Handler}=Opts) ->
+    case Len of
+        0 -> % There is no body
+            Handler:handle({Socket, Transport}, Opcode, #rmp_message{});
+        _ ->
+            case read(Len, Socket, Transport) of
+                {ok, Data} ->
+                    handle_body({Socket, Transport}, Data, Sizes, Opts),
+                    loop(header, Socket, Transport, Opts);
+                {error, Error} ->
+                    io:format("Socket error : ~p~n", [Error])
+        end
     end.
 
 handle_header(<<?REQ_MAGIC:8, Opcode:8, KeyLen:16,

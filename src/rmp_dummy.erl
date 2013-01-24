@@ -12,5 +12,7 @@ handle(Conn, ?GETKQ, #rmp_message{}=Message) ->
 handle(Conn, ?GET, #rmp_message{key=Key}=Message) ->
     io:format("Handle GET ~p~n", [Message]),
     ranch_memcached_protocol:respond(Conn, ?SUCCESS, #rmp_response{key=Key, body=Key});
+handle(Conn, ?VERSION, #rmp_message{}=_) ->
+    ranch_memcached_protocol:respond(Conn, ?SUCCESS, #rmp_response{body="1.4.2"});
 handle(_Conn, Opcode, Message) ->
     io:format("Oups handle: ~p ~p ~n", [Opcode, Message]).
