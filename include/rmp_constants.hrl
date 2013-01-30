@@ -58,7 +58,7 @@
 -record(rmp_message, {
     extra = <<0:32>>,
     key,
-    body,
+    value,
     cas,
     opaque
     }).
@@ -67,7 +67,7 @@
           status=0,
           extra = <<0:32>>,
           key,
-          body,
+          value,
           opaque=0,
           cas=0
          }).

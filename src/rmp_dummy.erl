@@ -9,10 +9,10 @@ handle(Conn, ?SET, #rmp_message{}=Message) ->
     ranch_memcached_protocol:respond(Conn, ?SUCCESS, #rmp_response{});
 handle(Conn, ?GETKQ, #rmp_message{}=Message) ->
     handle(Conn, ?GET, Message);
-handle(Conn, ?GET, #rmp_message{key=Key}=Message) ->
+handle(Conn, ?GET, #rmp_message{}=Message) ->
     io:format("Handle GET ~p~n", [Message]),
-    ranch_memcached_protocol:respond(Conn, ?SUCCESS, #rmp_response{key=Key, body=Key});
+    ranch_memcached_protocol:respond(Conn, ?SUCCESS, #rmp_response{value="Aussi"});
 handle(Conn, ?VERSION, #rmp_message{}=_) ->
-    ranch_memcached_protocol:respond(Conn, ?VERSION, #rmp_response{body="1.4.2", extra=undefined});
+    ranch_memcached_protocol:respond(Conn, ?VERSION, #rmp_response{value="1.4.2", extra=undefined});
 handle(_Conn, Opcode, Message) ->
     io:format("Oups handle: ~p ~p ~n", [Opcode, Message]).
