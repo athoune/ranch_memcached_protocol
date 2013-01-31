@@ -1,4 +1,4 @@
--module(ranch_memcached_protocol).
+-module(ranch_memcached_protocol_binary).
 -export([start_link/4, init/4, respond/3]).
 
 -include("rmp_constants.hrl").
