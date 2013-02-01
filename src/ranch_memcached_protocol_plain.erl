@@ -14,10 +14,8 @@ init(ListenerPid, Socket, Transport, Opts) ->
 
 loop(text, Socket, Transport, [Handler]=Opts, Remains) ->
     {ok, Line, Remains2} = read_line(Socket, Transport, Remains),
-    io:format("line ~p~n", [Line]),
     [Command|Args] = binary:split(Line, <<32>>, [global]),
     R = Handler:text(Command, Args, [], Socket, Transport),
-    io:format("texte red: ~p~n", [R]),
     loop(R, Socket, Transport, Opts, Remains2);
 
 loop({data, Command, Size, Context}, Socket, Transport, [Handler]=Opts, Remains) ->
@@ -54,12 +52,10 @@ try_to_split(Blob) ->
     end.
 
 read_line(Socket, Transport, Remains) ->
-    io:format("Stuff: ~p~n", [Remains]),
     case try_to_split(Remains) of
         again ->
             case Transport:recv(Socket, 0, 3000) of
                 {ok, Data} ->
-                    io:format("Slurping: ~p~n", [Data]),
                     Blob = <<Remains/binary, Data/binary>>,
                     read_line(Socket, Transport, Blob);
                 Error -> Error
