@@ -14,26 +14,36 @@ init(ListenerPid, Socket, Transport, Opts) ->
 
 loop(text, Socket, Transport, [Handler]=Opts, Remains) ->
     {ok, Line, Remains2} = read_line(Socket, Transport, Remains),
-    [Command|Args] = binary:split(<<32>>, Line, [global]),
+    io:format("line ~p~n", [Line]),
+    [Command|Args] = binary:split(Line, <<32>>, [global]),
     R = Handler:text(Command, Args, [], Socket, Transport),
+    io:format("texte red: ~p~n", [R]),
     loop(R, Socket, Transport, Opts, Remains2);
 
 loop({data, Command, Size, Context}, Socket, Transport, [Handler]=Opts, Remains) ->
-    {ok, Data} = read(Size, Socket, Transport, Remains),
-    read(2, Socket, Transport, Remains),
+    {ok, <<Data:Size/binary, 13, 10>>, Remains2} = read(Size + 2, Socket, Transport, Remains),
     R = Handler:data(Command, Data, Context, Socket, Transport),
-    loop(R, Socket, Transport, Opts, <<>>).
+    loop(R, Socket, Transport, Opts, Remains2).
 
 read(Length, Socket, Transport, Remains) ->
-    case Transport:recv(Socket, Length-size(Remains), 30000) of
-        {ok, Data} ->
-            L = size(Data),
-            case L of
-                Length -> {ok,  <<Remains, Data>>};
-                    _ -> read(Length-L, Socket, Transport, <<Remains, Data>>)
-            end;
-        Error -> Error
+    case size(Remains) >= Length of
+        true ->
+            <<Data:Length/binary, Remains2/binary>> = Remains,
+            {ok, Data, Remains2};
+        false ->
+            case Transport:recv(Socket, Length-size(Remains), 30000) of
+                {ok, Data} ->
+                    L = size(Data),
+                    case L of
+                        Length -> {ok,  <<Remains, Data>>, <<>>};
+                            _ -> read(Length-L, Socket, Transport, <<Remains, Data>>)
+                    end;
+                Error -> Error
+            end
     end.
+
+try_to_split(<<>>) ->
+    again;
 
 try_to_split(Blob) ->
     case binary:split(Blob, <<13,10>>) of
@@ -47,9 +57,10 @@ read_line(Socket, Transport, Remains) ->
     io:format("Stuff: ~p~n", [Remains]),
     case try_to_split(Remains) of
         again ->
-            case Transport:recv(Socket, 1024, 3000) of
+            case Transport:recv(Socket, 0, 3000) of
                 {ok, Data} ->
-                    Blob = <<Remains, Data>>,
+                    io:format("Slurping: ~p~n", [Data]),
+                    Blob = <<Remains/binary, Data/binary>>,
                     read_line(Socket, Transport, Blob);
                 Error -> Error
             end;
