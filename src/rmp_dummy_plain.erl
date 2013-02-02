@@ -1,4 +1,5 @@
 -module(rmp_dummy_plain).
+-behaviour(gen_memcached).
 
 -export([get/2, set/5]).
 
