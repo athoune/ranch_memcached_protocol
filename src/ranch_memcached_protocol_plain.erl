@@ -2,25 +2,25 @@
 -export([start_link/4, init/4]).
 
 
-start_link(ListenerPid, Socket, Transport, [Handler]) ->
-    Pid = spawn_link(?MODULE, init, [ListenerPid, Socket, Transport, [Handler]]),
+start_link(ListenerPid, Socket, Transport, [Handler, This]) ->
+    Pid = spawn_link(?MODULE, init, [ListenerPid, Socket, Transport, [Handler, This]]),
     {ok, Pid}.
 
 init(ListenerPid, Socket, Transport, Opts) ->
     ok = ranch:accept_ack(ListenerPid),
-    io:format("Got a connection!~n"),
+    io:format("Got a connection for ~p with ~p!~n", Opts),
     loop(text, Socket, Transport, Opts, <<>>),
     ok.
 
-loop(text, Socket, Transport, [Handler]=Opts, Remains) ->
+loop(text, Socket, Transport, [Handler, This]=Opts, Remains) ->
     {ok, Line, Remains2} = read_line(Socket, Transport, Remains),
     [Command|Args] = binary:split(Line, <<32>>, [global]),
-    R = Handler:text(Command, Args, [], Socket, Transport),
+    R = rmp_server:text(Command, Args, [], Socket, Transport, Handler, This),
     loop(R, Socket, Transport, Opts, Remains2);
 
-loop({data, Command, Size, Context}, Socket, Transport, [Handler]=Opts, Remains) ->
+loop({data, Command, Size, Context}, Socket, Transport, [Handler, This]=Opts, Remains) ->
     {ok, <<Data:Size/binary, 13, 10>>, Remains2} = read(Size + 2, Socket, Transport, Remains),
-    R = Handler:data(Command, Data, Context, Socket, Transport),
+    R = rmp_server:data(Command, Data, Context, Socket, Transport, Handler, This),
     loop(R, Socket, Transport, Opts, Remains2).
 
 read(Length, Socket, Transport, Remains) ->

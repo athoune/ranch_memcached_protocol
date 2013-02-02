@@ -12,7 +12,7 @@ Test it
 
     erl -pa deps/*/ebin -pa ebin -boot start_sasl -eval "application:start(ranch)."
 
-    ranch:start_listener(memcached, 10, ranch_tcp, [{port, 11211}], ranch_memcached_protocol_plain, [rmp_dummy_plain]).
+    ranch:start_listener(memcached, 10, ranch_tcp, [{port, 11211}], ranch_memcached_protocol_plain, [rmp_dummy_plain, []]).
 
 Licence
 -------
