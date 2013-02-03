@@ -8,3 +8,7 @@ print mc.set("some_key", "Some value")
 print mc.set("beuha", "Aussi")
 value = mc.get("some_key")
 print value
+mc.delete("some_key")
+value = mc.get("some_key")
+print mc.get("some_key")
+#print mc.stats()

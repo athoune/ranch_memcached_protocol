@@ -25,6 +25,15 @@ text(<<"get">>, Keys, _Context, Socket, Transport, Handler, Opts) ->
     Transport:send(Socket, <<"END", 13, 10>>),
     {text, Opts};
 
+text(<<"delete">>, [Key], _Context, Socket, Transport, Handler, Opts) ->
+    case Handler:delete(Key, Opts) of
+        {ok, Opts2} ->
+            Transport:send(Socket, <<"DELETED", 13, 10>>);
+        {none, Opts2} ->
+            Transport:send(Socket, <<"NOT_FOUND", 13, 10>>)
+    end,
+    {text, Opts2};
+
 text(<<"set">>, [Key, Flags, Exptime, Bytes], _Context, _Socket, _Transport, _Handler, Opts) ->
     {{data, set, parseInt(Bytes), [Key, Flags, Exptime, Bytes]}, Opts}.
 
