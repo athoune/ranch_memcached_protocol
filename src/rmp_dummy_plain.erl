@@ -1,11 +1,20 @@
 -module(rmp_dummy_plain).
 -behaviour(gen_memcached).
 
--export([get/2, set/5]).
+-export([init/1, get/2, set/5]).
 
-get(Key, Opts) ->
-    {ok, <<"popo">>, Opts}.
+-record(dummy, {store}).
 
-set(Key, _Flags, _Exptime, Data, Opts) ->
-    io:format("set ~p : ~p~n", [Key, Data]),
-    {ok, Opts}.
+init(_Opts) ->
+    {ok, #dummy{store=dict:new()}}.
+
+get(Key, #dummy{store=Store}=Opts) ->
+    case dict:find(Key, Store) of
+        error ->
+            {none, Opts};
+        {ok, Value} ->
+            {ok, Value, Opts}
+    end.
+
+set(Key, _Flags, _Exptime, Data, #dummy{store=Store}=Opts) ->
+    {ok, Opts#dummy{store=dict:store(Key, Data, Store)}}.

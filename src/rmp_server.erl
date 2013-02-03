@@ -11,18 +11,24 @@ fromInt(I) ->
 
 text(<<"get">>, Keys, _Context, Socket, Transport, Handler, Opts) ->
     lists:foreach(fun(Key) ->
-                io:format("Key ~p~n", [Key]),
-                {ok, Value, _} = Handler:get(Key, Opts),
-                Bytes = fromInt(size(Value)),
-                Transport:send(Socket, <<"VALUE ", Key/binary, " 0 ", Bytes/binary, 13, 10, Value/binary, 13, 10>>)
+                case Handler:get(Key, Opts) of
+                    {ok, Value, _} ->
+                        Bytes = fromInt(size(Value)),
+                        Transport:send(Socket, <<"VALUE ",
+                            Key/binary, " 0 ", Bytes/binary, 13, 10,
+                            Value/binary, 13, 10>>);
+                    {none, _} ->
+                        io:format("Nothing for ~p~n", [Key]),
+                        none
+                end
         end, Keys),
     Transport:send(Socket, <<"END", 13, 10>>),
-    text;
+    {text, Opts};
 
-text(<<"set">>, [Key, Flags, Exptime, Bytes], _Context, _Socket, _Transport, _Handler, _Opts) ->
-    {data, set, parseInt(Bytes), [Key, Flags, Exptime, Bytes]}.
+text(<<"set">>, [Key, Flags, Exptime, Bytes], _Context, _Socket, _Transport, _Handler, Opts) ->
+    {{data, set, parseInt(Bytes), [Key, Flags, Exptime, Bytes]}, Opts}.
 
 data(set, Data, [Key, Flags, Exptime, _Bytes], Socket, Transport, Handler, Opts) ->
-    {ok, _Opts2} = Handler:set(Key, Flags, Exptime, Data, Opts),
+    {ok, Opts2} = Handler:set(Key, Flags, Exptime, Data, Opts),
     Transport:send(Socket, <<"STORED", 13, 10>>),
-    text.
+    {text, Opts2}.
