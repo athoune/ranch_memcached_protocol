@@ -1,7 +1,7 @@
 -module(rmp_dummy_plain).
 -behaviour(gen_memcached).
 
--export([init/1, get/2, set/5, delete/2]).
+-export([init/1, get/2, set/5, delete/2, stats/1]).
 
 -record(dummy, {store}).
 
@@ -26,3 +26,7 @@ delete(Key, #dummy{store=Store}=Opts) ->
         {ok, _} ->
             {ok, Opts#dummy{store=dict:erase(Key, Store)}}
     end.
+
+stats(#dummy{store=Store}) ->
+    S = dict:size(Store),
+    [<<"Size ", S/integer>>].

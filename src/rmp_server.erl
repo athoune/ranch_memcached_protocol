@@ -25,6 +25,7 @@ text(<<"get">>, Keys, _Context, Socket, Transport, Handler, Opts) ->
     Transport:send(Socket, <<"END", 13, 10>>),
     {text, Opts};
 
+% [FIXME] handle noreply
 text(<<"delete">>, [Key], _Context, Socket, Transport, Handler, Opts) ->
     case Handler:delete(Key, Opts) of
         {ok, Opts2} ->
@@ -33,6 +34,14 @@ text(<<"delete">>, [Key], _Context, Socket, Transport, Handler, Opts) ->
             Transport:send(Socket, <<"NOT_FOUND", 13, 10>>)
     end,
     {text, Opts2};
+
+text(<<"stats">>, [], _Context, Socket, Transport, Handler, Opts) ->
+    lists:foreach(fun(Stat) ->
+                Transport:send(Socket, <<"STAT ", Stat/binary, 13, 10>>)
+        end, Handler:stats(Opts)),
+    Transport:send(Socket, <<"END", 13, 10>>),
+    {text, Opts};
+
 
 text(<<"set">>, [Key, Flags, Exptime, Bytes], _Context, _Socket, _Transport, _Handler, Opts) ->
     {{data, set, parseInt(Bytes), [Key, Flags, Exptime, Bytes]}, Opts}.

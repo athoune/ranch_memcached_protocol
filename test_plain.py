@@ -11,4 +11,4 @@ print value
 mc.delete("some_key")
 value = mc.get("some_key")
 print mc.get("some_key")
-#print mc.stats()
+print mc.get_stats()
